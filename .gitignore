@@ -1,0 +1,4 @@
+BasicCompanyDataAsOneFile-*.csv
+preview.csv
+__pycache__/
+.DS_Store
