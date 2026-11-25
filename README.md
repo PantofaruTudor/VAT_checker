@@ -11,7 +11,7 @@ I took 300 random UK companies from Companies House and tried to find their VAT 
 - **The problem is the source, not the method.** Most small companies don't put their VAT number on their website, so a better script, a search API or a team of people all hit the same limit. Even an improved method would find a number for only about 5–15% of companies.
 - **A valid number is often not the company's own.** 3 of the 5 valid numbers I found belonged to other companies (one with a similar name in another town, two using a brand name), and 1 was the number of a VAT group. Comparing the name HMRC gives back catches these mistakes.
 
-My conclusion: a VAT dataset for small UK companies can't be built well from the open web. Websites can fill a small part of the gap, but most of it needs other sources, like the invoices the customer already receives or asking the suppliers directly.
+My conclusion: a VAT dataset for small UK companies can't be built well from the open web. Websites can fill a small part of the problem, but most of it needs other sources, like asking the customer directly.
 
 ---
 
@@ -19,7 +19,7 @@ My conclusion: a VAT dataset for small UK companies can't be built well from the
 
 ### Understanding the problem first
 
-The problem has two separate questions:
+The problem has two sides:
 
 1. **Should this company have a VAT number at all?** If not, "not found" is the right answer, not a failure.
 2. **Is the number I found really this company's?** A wrong number is worse than a missing one, because nobody can see it is wrong.
@@ -29,14 +29,14 @@ The problem has two separate questions:
 Three rules decide it:
 
 1. **Turnover.** A company must register when its taxable sales go over £90,000 in 12 months. Below that it can still register if it wants to.
-2. **Exempt activity.** A company that only sells VAT-exempt things (insurance, finance, education, healthcare, membership subscriptions) cannot register at all, however big it is. Property is exempt too, but property companies can choose to pay VAT, and many do.
+2. **Exempt activity.** A company that only sells VAT-exempt things (insurance, finance, education, healthcare, membership subscriptions) cannot register at all, however big it is. Property is exempt too, but property companies can choose to pay VAT
 3. **VAT groups.** Companies owned by the same parent can share one VAT number. HMRC then shows the name of the main company of the group, not the one I was looking for.
 
 #### Question 2: attaching a number to the right company
 
 HMRC's checker shows the name and address behind a VAT number. I compare them with Companies House:
 
-- **The name** is the main check. It must match after cleaning (removing dots, Ltd = Limited), against the current or a previous name.
+- **The name** is the main check. It must match after cleaning (removing dots, Ltd = Limited), against the active or the previous name.
 - **The postcode** helps when two companies have similar names, like "J Smith Building Services Ltd" and "J Smith Builders Ltd".
 
 But a postcode is only useful if few companies use it. If 3 companies share a postcode, a match is strong evidence. If 89,013 do (a virtual office in London), a match proves almost nothing. So for every company I count how many others share its postcode (`postcode_shared_by`).
@@ -51,7 +51,7 @@ Things that were not obvious at the start:
 
 - **The file has 5,711,779 companies, not ~4.2 million.** It also counts companies about to be closed (7.3%) and companies in liquidation (1.9%).
 - **There is no turnover, so I could not filter on £90,000.** The closest thing is the accounts category, and it is only a rough sign: a very small company can choose to file bigger accounts.
-- **Micro companies are the hardest part.** They are the biggest group (32.9% of all companies) and their sales can be anywhere from £0 to about £1 million. The £90,000 line is right in the middle, so the category tells you nothing.
+- **Micro companies are the hardest part.** They are the biggest group (32% of all companies) and their sales can be anywhere from £0 to about £1 million. The £90,000 line is right in the middle, so the category tells me nothing.
 - **SIC codes are chosen by the company and nobody checks them.** In one test a large charity with GROUP accounts had the code for "non-trading company". I only use SIC as a weak sign.
 
 ### Where a VAT number can be found
@@ -59,9 +59,9 @@ Things that were not obvious at the start:
 | Source | Has the VAT number? | Works for 40,000 companies? | Status |
 |---|---|---|---|
 | VAT registration certificate (VAT4) | Yes, but only the company has it | No | Ruled out |
-| Invoices | Yes, but only the customer sees them | No | Ruled out (public PDFs not tested yet) |
+| Invoices | Yes, but only the customer sees them | No | Ruled out - public PDFs not tested yet |
 | Company website | Sometimes | Partly | **Tested, see Part 2** |
-| Amazon / eBay seller pages | Sometimes | Terms of use may forbid it | Not tested: their terms don't allow collecting data automatically, so it can't be used in a product |
+| Amazon / eBay seller pages | Sometimes | Terms of use may make it illegal | Not tested: their terms don't allow collecting data automatically, so it can't be used in a product |
 | EORI number | Yes, it contains the VAT number | No | Not useful: the EORI checker also needs the number first, so it can only confirm, not find |
 | findvatnumber.com | Claims to, for "6M+ companies", but does not say where its data comes from | Unknown | Not tested: excluded because the source of its data is unknown |
 
@@ -73,8 +73,8 @@ HMRC's API confirms a VAT number and shows the name and address behind it. It ca
 
 ### Dead ends and ideas that did not hold
 
-- **Company websites as the main source of VAT numbers.** I expected websites to be the best source, because UK law requires online sellers to show their VAT number. In practice, of 17 company websites I could link to a company by hand, only 1 showed a VAT number. Most small companies don't publish it, or don't sell online. The law only requires the VAT number from VAT-registered companies that sell or offer services online, many small companies only have a simple brochure site, and the rule is rarely enforced. Even the company number, which every company website must show, appeared on only 4 of the 17 sites I could link to a company. See Part 2.
-- **"Companies at shared addresses are smaller."** I expected companies at busy postcodes (accountants, virtual offices) to be smaller and less likely to have VAT. On 300 companies the groups looked the same at busy and quiet postcodes, so I found no link.
+- **Company websites as the main source of VAT numbers.** I expected websites to be the best source, because UK law requires online sellers to show their VAT number. In practice, of 17 company websites that I could link to a company by hand, only 1 showed a VAT number. Most small companies don't show it, or don't sell online. The law only requires the VAT number from VAT-registered companies that sell or offer services online, many small companies only have a simple website, and the rule is rarely seen in action. Even the company number, which every company website must show, appeared on only 4 of the 17 sites I could link to a company. See Part 2.
+- **"Companies at shared addresses are smaller."** I expected companies at busy postcodes to be smaller and less likely to have VAT. On 300 companies the groups looked the same at busy and quiet postcodes.
 
 ---
 
@@ -82,10 +82,9 @@ HMRC's API confirms a VAT number and shows the name and address behind it. It ca
 
 ### The sample
 
-I drew **300 companies completely at random** from all 5,711,779 (`src/01_sample.py`). The seed is fixed (42), so anyone running the script gets the same 300.
+I drew **300 companies completely at random** from all 5 million (`src/01_sample.py`). The seed is fixed (42), so anyone running the script gets the same 300.
 
-I did **not** pick companies I knew published their VAT number, and I did not remove dormant or micro companies. The point is to measure everything, including the hard part.
-
+I did **not** pick companies I knew published their VAT number, and I did not remove dormant or micro companies. The point is to measure everything.
 | Accounts category | All companies | Sample |
 |---|---|---|
 | MICRO ENTITY | 32.9% | 31.7% |
@@ -110,21 +109,16 @@ Before searching, I sorted the 300 companies into three groups (`src/04_triage.p
 | unlikely | Dormant, only exempt SIC codes, holding company, not active, late filings, charity | 118 |
 
 
-Decisions that can be argued with:
-- TOTAL EXEMPTION FULL counts as "likely". This is the weakest rule: 53 of the 84 "likely" companies are here, and very small companies can file this way too.
-- SIC 68 (property) is **not** treated as exempt, because property companies can choose to pay VAT.
-- SIC 85 (education) **is** treated as exempt, although private training is often taxed.
-
 ### Finding websites automatically
 
-`src/05_find_websites.py`, kept simple on purpose:
+`src/05_find_websites.py`, a simple web scraper:
 
 1. **Guess the domain from the name.** Remove words like ltd, limited, the, uk, and join the rest: `NIGHT EXCHANGE LIMITED` → `nightexchange.co.uk`, `nightexchange.com`.
 2. **Take the first domain that answers.**
 3. **Read six pages:** home, contact, contact-us, about-us, terms, privacy-policy.
 4. **Check the site belongs to the company:** look for the company number (strong proof) or the postcode (good proof). Otherwise mark it `not_confirmed`.
 5. **Look for a VAT number:** the word "VAT" followed by 9 digits.
-6. **Run the HMRC checksum** to drop numbers that are not VAT numbers, like phone numbers.
+6. **Run the HMRC check** to drop numbers that are not VAT numbers, like phone numbers.
 
 ### Results so far
 
@@ -151,8 +145,6 @@ Two of these are exactly the hidden error the task warns about:
 - **ORBITS IT GROUP EOT LIMITED** is a holding company that does not trade. The website is at the same address, but the VAT number almost certainly belongs to the company that does the actual work.
 - **IMPULSE SECURITY SYSTEMS LIMITED** is dormant, yet a website with the same name shows a VAT number. The number probably belongs to someone else using the same name.
 
-My triage had put both in "unlikely".
-
 | Group | Companies | Domain answered | VAT candidate |
 |---|---|---|---|
 | likely | 84 | 28 (33%) | 2 (2.4%) |
@@ -170,7 +162,7 @@ I checked the four numbers that passed the checksum on the HMRC website:
 | IMPULSE SECURITY SYSTEMS LIMITED | SPY ALARMS LIMITED ("Impulse Security Systems" is their brand) | Wrong company |
 | ORBITS IT GROUP EOT LIMITED | ORIGINAL BUSINESS IT SOLUTIONS LTD ("ORBITS" is their short name) | Wrong company |
 
-After fixing the leading-zero check (websites often write `8756469` for company `08756469`), a second full run confirmed 14 sites instead of 13. The other results were the same, so the script is stable between runs. One limit remains: it only tries `https://www.`, so sites that work only without `www` are missed.
+After fixing the leading-zero check (websites often write `8756469` for company `08756469`), a second full run confirmed 14 sites instead of 13. The other results were the same. One limit remains: it only tries `https://www.`, so sites that work only without `www` are missed.
 
 ### Matching a VAT number to the right company
 
@@ -211,10 +203,10 @@ The triage also held up: websites with strong proof (company number or directors
 
 ### False-positive rate
 
-I found 6 VAT numbers in total: 5 by the script and 1 by hand (RMS). With so few, I checked every one by hand on the HMRC website.
+I found 6 VAT numbers in total: 5 by the script and 1 by hand. With so few, I checked every one by hand on the HMRC website.
 
 - 1 failed the checksum, so it was not a real VAT number.
-- The other 5 were all **valid** at HMRC.
+- The other 5 were all valid at HMRC.
 - But only **1** of them belonged to the company I was looking for (Moorland).
 - **3** belonged to other companies: a company with almost the same name in another town, and two companies whose brand name matched my company's name.
 - **1** (RMS) is the number of a VAT group. It is the right number to use for RMS invoices, but HMRC shows the group's name, not RMS.
@@ -223,7 +215,7 @@ So if I had trusted every valid number found on a matching website, **3 of 5 wou
 
 The lesson: **"valid at HMRC" does not mean "belongs to this company".** The name check is what stops the hidden mistakes. Even a website the script had confirmed (Orbits IT) showed another company's number.
 
-This is only 5 numbers, so the exact percentage means little. What matters is that the mistake is common and easy to catch.
+This is only 5 numbers, so the exact percentage means little. What matters is that the mistake and easy to catch.
 
 ### What these numbers don't capture
 
@@ -256,7 +248,7 @@ So better tools make each number much cheaper, but even the improved method find
 
 ### What breaks first
 
-1. **Matching numbers to companies.** It is the most dangerous, because the mistake is invisible: in my test 3 of 5 valid numbers belonged to other companies (sister companies, brand names, VAT groups). At scale there will be many more of these cases.
+1. **Matching numbers to companies.** It is the most dangerous, because the mistake is hard to see: in my test 3 of 5 valid numbers belonged to other companies (sister companies, brand names, VAT groups). At scale there will be many more of these cases.
 2. **Finding the website.** It is the biggest loss: the script found the right website for only 6 of the 32 I found by hand.
 3. **The search API limits.** These can be solved with money.
 
