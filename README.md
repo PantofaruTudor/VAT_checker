@@ -307,3 +307,6 @@ python3 src/06_manual_subset.py
 | `04_triage.py` | Sorts companies into likely / uncertain / unlikely | `data/sample_triaged.csv`, `data/group_*.csv` |
 | `05_find_websites.py` | Guesses domains, checks ownership, looks for VAT numbers | `data/websites_auto.csv` |
 | `06_manual_subset.py` | Picks 60 companies for the manual search | `data/manual_check.xlsx` |
+
+
+Use of AI. I used Claude throughout this project: to help with writing some parts of the scripts, to look up for rules and prices, to double check informations, and to visually improve this README so it could be easier to read. The approach and the decisions are mine: what to sample and how to group it, searching 60 companies by hand to measure the script, the rules used to match a VAT to a company, which sources to drop, and the conclusion that the source, not the script, is the limit. I checked every number in this README against the data.
