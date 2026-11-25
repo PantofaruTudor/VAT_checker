@@ -2,11 +2,16 @@
 
 Task: Can a dataset of UK company VAT numbers be built from the open web? This repository is my attempt to answer that on a random sample of 300 companies, and to be honest about where the idea works and where it breaks.
 
-> **Status:** work in progress. Sections marked **TODO** are not done yet.
 
 ## Summary
 
-> TODO: write last. 5–6 lines: what I tried, the main number, the conclusion.
+I took 300 random UK companies from Companies House and tried to find their VAT numbers on their websites, first with a script and then by hand for 60 of them. Every number found was checked on the HMRC website.
+
+- **The script** found a correct VAT number for **1 company in 300**. **Searching by hand** found **1 in 60**.
+- **The problem is the source, not the method.** Most small companies don't put their VAT number on their website, so a better script, a search API or a team of people all hit the same limit. Even an improved method would find a number for only about 5–15% of companies.
+- **A valid number is often not the company's own.** 3 of the 5 valid numbers I found belonged to other companies (one with a similar name in another town, two using a brand name), and 1 was the number of a VAT group. Comparing the name HMRC gives back catches these mistakes.
+
+My conclusion: a VAT dataset for small UK companies can't be built well from the open web. Websites can fill a small part of the gap, but most of it needs other sources, like the invoices the customer already receives or asking the suppliers directly.
 
 ---
 
@@ -56,11 +61,9 @@ Things that were not obvious at the start:
 | VAT registration certificate (VAT4) | Yes, but only the company has it | No | Ruled out |
 | Invoices | Yes, but only the customer sees them | No | Ruled out (public PDFs not tested yet) |
 | Company website | Sometimes | Partly | **Tested, see Part 2** |
-| Amazon / eBay seller pages | Sometimes | Terms of use may forbid it | TODO |
-| EORI number | Yes, it contains the VAT number | Unknown | TODO |
-| findvatnumber.com | Claims to, for "6M+ companies", but does not say where its data comes from | Unknown | TODO |
-| Common Crawl | Unknown | Yes | TODO |
-| Public procurement and spend data | Unknown | Unknown | TODO |
+| Amazon / eBay seller pages | Sometimes | Terms of use may forbid it | Not tested: their terms don't allow collecting data automatically, so it can't be used in a product |
+| EORI number | Yes, it contains the VAT number | No | Not useful: the EORI checker also needs the number first, so it can only confirm, not find |
+| findvatnumber.com | Claims to, for "6M+ companies", but does not say where its data comes from | Unknown | Not tested: excluded because the source of its data is unknown |
 
 **Why websites are the main source.** UK law requires a company that sells online to show its VAT number. It also requires every company to show its Companies House number on its website. That second rule was the most useful thing I found: it lets me **prove a website belongs to a company**, which a similar name cannot.
 
@@ -70,9 +73,8 @@ HMRC's API confirms a VAT number and shows the name and address behind it. It ca
 
 ### Dead ends and ideas that did not hold
 
+- **Company websites as the main source of VAT numbers.** I expected websites to be the best source, because UK law requires online sellers to show their VAT number. In practice, of 17 company websites I could link to a company by hand, only 1 showed a VAT number. Most small companies don't publish it, or don't sell online. The law only requires the VAT number from VAT-registered companies that sell or offer services online, many small companies only have a simple brochure site, and the rule is rarely enforced. Even the company number, which every company website must show, appeared on only 4 of the 17 sites I could link to a company. See Part 2.
 - **"Companies at shared addresses are smaller."** I expected companies at busy postcodes (accountants, virtual offices) to be smaller and less likely to have VAT. On 300 companies the groups looked the same at busy and quiet postcodes, so I found no link.
-
-> TODO: add the other sources as I test them, each with what I expected, what I ran and why it failed.
 
 ---
 
@@ -95,7 +97,7 @@ I did **not** pick companies I knew published their VAT number, and I did not re
 Full table: `data/population_vs_sample.csv`.
 
 - **There are more dormant companies than expected** (16.7% against 10.9%). With eight other seeds it came out between 8% and 13%, so seed 42 was just unlucky. I kept it, because changing the seed after seeing the result would mean picking the sample by its result.
-- **Large companies are almost missing** (1 FULL, 0 MEDIUM). I think they are the easier case anyway: they publish their VAT number more often, and the customer probably has them already. TODO: test on 20–30 large companies.
+- **Large companies are almost missing** (1 FULL, 0 MEDIUM). I think they are the easier case anyway: they publish their VAT number more often, and the customer probably has them already (see "What these numbers don't capture").
 
 ### Triage: which companies should have a VAT number?
 
@@ -159,7 +161,16 @@ My triage had put both in "unlikely".
 
 These numbers are too small to draw conclusions yet.
 
-> TODO: HMRC results for the four candidates that passed the checksum.
+I checked the four numbers that passed the checksum on the HMRC website:
+
+| Company in my sample | HMRC says the number belongs to | Result |
+|---|---|---|
+| MOORLAND ASSET FINANCE LTD | MOORLAND ASSET FINANCE LIMITED | Correct |
+| WILLIAMS LETTINGS MERTHYR LTD | WILLIAMS LETTINGS LIMITED (a different company in Rhyl) | Wrong company |
+| IMPULSE SECURITY SYSTEMS LIMITED | SPY ALARMS LIMITED ("Impulse Security Systems" is their brand) | Wrong company |
+| ORBITS IT GROUP EOT LIMITED | ORIGINAL BUSINESS IT SOLUTIONS LTD ("ORBITS" is their short name) | Wrong company |
+
+After fixing the leading-zero check (websites often write `8756469` for company `08756469`), a second full run confirmed 14 sites instead of 13. The other results were the same, so the script is stable between runs. One limit remains: it only tries `https://www.`, so sites that work only without `www` are missed.
 
 ### Matching a VAT number to the right company
 
@@ -177,41 +188,108 @@ Two safety rules:
 
 ### Manual search: measuring the automatic method
 
-> TODO: 60 companies (20 per group, `data/manual_check.xlsx`) searched by hand, 4 minutes max per company. Then compare with the script: websites found, wrong websites, VAT numbers found, HMRC confirmations, time per company.
+I searched 60 companies by hand (20 per group, `data/manual_check.xlsx`): Google search, open the most likely site, check it belongs to the company, look for a VAT number. It took 124 minutes, about **2 minutes per company**. Then I compared my results with the script (first run) on the same 60 companies.
+
+| | By hand | Script |
+|---|---|---|
+| Websites found | 32 | 23 domains answered |
+| Really the company's | 17 with some proof (7 strong, 10 name + activity) | 6, the same sites I found |
+| Wrong websites | – | 17, all marked `not_confirmed` |
+| VAT numbers found | 1 (RMS) | 0 |
+
+**A person is much better at finding the site.** The script found the right website for only 6 of my 32. It cannot guess brand names (RMS Estate Agents uses `rookmatthewssayer.co.uk`), small changes (`desmouk.co.uk`, `dreamhome4u.co.uk`), hyphens (`esi-building.co.uk`), abbreviations (`seschester.co.uk`) or other endings (`structify.ai`, `.org.uk`).
+
+**The script is better and more consistent at checking it.** It never accepted a wrong website: all 17 were marked `not_confirmed`. On the same site it was sometimes more careful than me: it found the company number on Haywood Recruitment's site, which I missed, and confirmed two sites by postcode that I had only matched by name. It reads the same pages every time; a person in a hurry does not.
+
+So the best method combines them: a search (by a person or a search API) to find the site, then an automatic check of company number, postcode and VAT number.
+
+**The most important finding: even with the right website, the VAT number is rarely there.** I had 17 sites with some proof of ownership and found only 1 VAT number among them. In the script's first run, 2 of 13 confirmed sites had one. **Small UK companies mostly don't put their VAT number on their website, whoever does the search.** For the small companies the customer is missing, websites are a weak source.
+
+**Would a better script help?** About 7 of the 26 websites I found and the script missed could be caught with simple extra rules (no `www`, hyphens, "uk" added to the name, dropping the last word). The other 18 use trading names or abbreviations that can't be guessed. So better guessing could roughly double the websites found, but because so few small company websites show a VAT number, it would add only 1–2 VAT numbers on 300 companies. **The limit is the source, not the script.**
+
+The triage also held up: websites with strong proof (company number or directors) were found for 6 of 20 "likely" companies, 1 of 20 "uncertain" and 0 of 20 "unlikely".
 
 ### False-positive rate
 
-> TODO: every accepted number checked with HMRC, then a hand check of accepted matches. Report the rate, how it was measured and on how many companies.
+I found 6 VAT numbers in total: 5 by the script and 1 by hand (RMS). With so few, I checked every one by hand on the HMRC website.
+
+- 1 failed the checksum, so it was not a real VAT number.
+- The other 5 were all **valid** at HMRC.
+- But only **1** of them belonged to the company I was looking for (Moorland).
+- **3** belonged to other companies: a company with almost the same name in another town, and two companies whose brand name matched my company's name.
+- **1** (RMS) is the number of a VAT group. It is the right number to use for RMS invoices, but HMRC shows the group's name, not RMS.
+
+So if I had trusted every valid number found on a matching website, **3 of 5 would have been wrong**. After comparing the name HMRC gives back, **none of the wrong ones get through**.
+
+The lesson: **"valid at HMRC" does not mean "belongs to this company".** The name check is what stops the hidden mistakes. Even a website the script had confirmed (Orbits IT) showed another company's number.
+
+This is only 5 numbers, so the exact percentage means little. What matters is that the mistake is common and easy to catch.
 
 ### What these numbers don't capture
 
-> TODO
+- **Large companies.** My random sample has almost none (1 FULL, 0 MEDIUM). I think this is fine: large companies publish their VAT number more often, and the customer probably already has them. The real problem is the small and medium companies, and that is what the sample covers.
+- **"Not found" is still two things.** It can mean "not registered for VAT" or "registered, but not published anywhere I looked". From the outside there is no way to tell them apart.
+- **Only one source was tested properly: websites.** The other ways to get the number are official documents (invoices, contracts), which are not public and hard to find, or asking each company directly. Asking works best for the customer, who already works with these suppliers and gets a reply.
+- **Small numbers.** 300 companies, 60 searched by hand, 6 VAT numbers found. The percentages are only a rough guide, but the result is clear: small company websites rarely show a VAT number, and a valid number is often not the company's own.
 
 ---
 
 ## Part 3: What I would do with real resources
 
-> TODO. Notes so far:
-> - HMRC API: one-time approval, 3 checks per second, about 4 hours for 40,000 numbers.
-> - Guessing domains is free but finds a confirmed website for only 4.3% of companies. A search API would find more, at a cost per search (TODO: price it).
-> - The time per company from the manual test gives the cost of a team doing it by hand.
-> - First thing to ask the customer: the third of suppliers they already have VAT numbers for. It shows what their suppliers look like, and gives us known answers to test against.
+### Coverage and accuracy
 
----
+My test showed that the biggest problem is not the script but the source: most small companies don't put their VAT number on their website. So with more resources, my first step would be to find **better sources** for websites and VAT numbers, and only then improve the scripts and the manual checks.
+
+On websites alone, the ceiling is low. If a search API found the right website for 75% of companies, and 6–8% of confirmed websites show a correct VAT number (as in my test), I would find a number for about 0.75 × 6–8% ≈ **5–6% of companies**. With a better scraper and a paid team checking more carefully, I think it could reach **at most about 15%**.
+
+Accuracy is easier to keep high. The checks I already use (checksum, then comparing the HMRC name and postcode) stopped all 3 wrong numbers out of 5 in my test. At scale they would run automatically, with a person only for the unclear cases.
+
+### Rough cost per company
+
+The cost per company is: search API + downloading the pages + HMRC check (free) + a person checking the unclear cases. Prices used: a search API at about $5 (€4.3) per 1,000 searches (Brave), a team in Romania paid between the minimum wage (about €5 per hour) and about €10 per hour, and 2 minutes per company, which is what my manual search took. The customer is missing VAT numbers for about 26,700 suppliers.
+
+*With my current method.* The script costs under 1 cent per company (about €300 in total) but finds a correct VAT number for only 0.3% of companies, about €3 per number. Searching by hand finds 1.7%, but costs €4,500–8,800, or €10–20 per number.
+
+*With an improved method.* At about €0.05–0.09 per company (€1,300–2,400 in total) and 5–15% of companies found, that is €0.30–2 per number.
+
+So better tools make each number much cheaper, but even the improved method finds a VAT number for only 5–15% of the missing suppliers. The cost is not the problem. The source is. For the rest, the customer needs other sources: the invoices they already received from these suppliers, or simply asking the suppliers directly.
+
+### What breaks first
+
+1. **Matching numbers to companies.** It is the most dangerous, because the mistake is invisible: in my test 3 of 5 valid numbers belonged to other companies (sister companies, brand names, VAT groups). At scale there will be many more of these cases.
+2. **Finding the website.** It is the biggest loss: the script found the right website for only 6 of the 32 I found by hand.
+3. **The search API limits.** These can be solved with money.
+
+### What I would monitor in production
+
+Mainly the accuracy of the data:
+- how many numbers pass every check (checksum, HMRC name and postcode)
+- how many numbers match a parent or sister company instead of the company itself
+- how many numbers become invalid at the monthly recheck
+- how many web requests fail, because a lost connection looks exactly like "no website found"
 
 ## Debate topics
 
-**Trying every valid number on HMRC's checker.** A UK VAT number has 9 digits, and the last 2 are check digits, so only 7 are free: about 10 million numbers, or up to about 20 million with both checksum formulas. At 3 checks per second that is about 39 days non-stop (77 days for both). So it is possible, but a bad idea. HMRC can block access, and then we lose the only way to check our data. It would also build a list of names and addresses that includes sole traders, which is a data protection problem for a company that sells data.
+**Trying every valid number on HMRC's checker.** A UK VAT number has 9 digits, and the last 2 are check digits, so only 7 are free: about 10 million numbers, or up to about 20 million with both checksum formulas. At 3 checks per second that is about 39 days non-stop (77 days for both). So it is possible, but a bad idea. HMRC can block access, and then we lose the only way to check our data. 
 
-**Keeping the dataset current.** TODO
+**Keeping the dataset current.**
+Once a month I would check all 40,000 numbers again with the HMRC API. A full check takes about 4 hours (3 checks per second), so doing it monthly costs almost nothing. I used the HMRC website by hand in this project because getting API access takes up to 10 working days, but at scale the API is the right tool.
 
-**Knowing the dataset is wrong at scale.** TODO
+Every change goes into a separate table first, not straight into the main dataset. I look at the changes there and then decide what to do:
+- the number is no longer valid → the company stopped being VAT registered, so I remove the number
+- HMRC shows a new name → I check the match again
+- a company now has a website → I search it again, maybe the VAT number is there now
 
-**Sources I would not be comfortable using in a product.** TODO (marketplace terms of use, sources that don't say where their data comes from, like findvatnumber.com)
+New companies from the monthly Companies House file go on a separate list. I search them again after a few months, because a new company usually registers for VAT only when its sales grow, and its website comes later too.
 
-## Beyond the UK
+**Knowing the dataset is wrong at scale.**
+There is no complete list to compare with, except one: the customer already has VAT numbers for about a third of their suppliers. I would run my method on those suppliers too, without looking at their numbers, and then compare. Where my number differs from theirs, one of us is wrong, and I can check by hand which one. This is the only real test with known answers, and I would repeat it every time the method changes.
 
-> TODO (optional)
+**Sources I would not use in a product.**
+- **findvatnumber.com.** It does not say where its data comes from. I can't sell data when I don't know its source or whether it is allowed to be reused.
+- **Amazon and eBay seller pages.** Their terms usually don't allow collecting data automatically.
+
+
 
 ---
 
